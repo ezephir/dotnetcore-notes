@@ -1,0 +1,89 @@
+= Notes for working with DotNet Core
+
+== CoreCLR
+
+=== Building
+
+Both projects seem to have reasonable documentation to follow, although certain
+portions are out of date:
+
+On OS X:
+
+* Builds on OS X require Homebrew to be placed in /usr/local, even though this not specified in the documentation. This primarily matters for the icu4c and openssl libraries.
+* Mac OS X 10.11 is the minimum supported version. Ignore references to 10.10 (Yosemite).
+* Although the mono installer is recommended on the website,
+
+In general:
+
+The instructions for NuGet are completely out of date:
+
+* The nuget binary http://www.nuget.org/nuget.exe, as mentioned in the docs is version 2.8. The latests is version 3.3 (with version 3.4 due out soon). The download process now requires version 3 or later of NuGet (which is available from the website -- just download the command line tools).
+* The particular packages listed in the NuGet XML don't seem to exist anymore. Running the command basically says as much.
+* The updated feed is available at https://dotnet.myget.org/F/dotnet-core/api/v3/index.json and the feed is visible here: https://dotnet.myget.org/gallery/dotnet-core.
+
+I updated to using the `dotnet` command line tool (which is present at `<repository>/Tools/dotnetcli/dotnet` after performing a full build.
+
+I've had luck getting projects to download using the following project.json:
+
+```
+{
+  "frameworks": {
+    "dnxcore50": {}
+  },
+
+  "dependencies": {
+    "System.Console": "4.0.0-*",
+    "System.Diagnostics.Contracts": "4.0.1-*",
+    "System.Diagnostics.Debug": "4.0.11-*",
+    "System.Diagnostics.Tools": "4.0.1-*",
+    "System.Globalization":  "4.0.11-*",
+    "System.IO":  "4.1.0-*",
+    "System.IO.FileSystem.Primitives": "4.0.1-*",
+    "System.Reflection": "4.1.0-*",
+    "System.Resources.ResourceManager": "4.0.1-*",
+    "System.Runtime": "4.1.0-*",
+    "System.Runtime.Extensions": "4.1.0-*",
+    "System.Runtime.Handles": "4.0.1-*",
+    "System.Runtime.InteropServices": "4.1.0-*",
+    "System.Text.Encoding": "4.0.11-*",
+    "System.Text.Encoding.Extensions": "4.0.11-*",
+    "System.Threading": "4.0.11-*",
+    "System.Threading.Tasks": "4.0.11-*"
+  }
+}
+```
+
+Downloading these libraries seems to work with the following command line:
+`<repository>/tools/dotnetcli/dotnet restore project.json --projects projects --source http://https://dotnet.myget.org/F/dotnet-core/api/v3/index.json`
+
+This will throw all of the packages versions into the package.lock folder and the packages into the specified folder, in this case `packages`.
+
+NOTE: I haven't yet attempted to run CoreCLR and see that the hello world example works and I don't know that what I've implemented here is sane. Attempt at your own peril!
+
+=== Tooling
+
+There are three different sets of tooling for DotNet Core: It's own commandline tools (e.g. `corerun`), DNX, NuGet, and DotNet CLI.
+
+* `corerun` simply executes already compiled DotNet code. It assumes that all of the code needed has already been downloaded to disk.
+* NuGet is a package manager. It downloads compiled code from a repository and places it on the local disk for corerun to use.
+* DotNet CLI is integrates the DotNet Core tools and NuGet into a single interface which is easier to use. It allows for package management and also running programs.
+* DNX is the DotNet execution environment. It is used to run an download packages. It is now deprecated in favor of the dotnet CLI tools.
+
+
+=== Internationalization for Built-In Strings.
+
+* CoreCLR has a library, "mscorrc" which contains localized strings.
+* These strings are compiled by running the Windows Resource File through a script (see rctocpp.awk and processrc.awk in `src/nativeresources.` These tools are used by the build_resource function in `src/CMakeLists.txt`. This function gets called in `src/dlls/mscorrc/full/CMakeLists.txt` and then a target is created with it's output in the same file, causing the cpp file to be generated and for it be used.
+
+The output of this function is used by the PAL_GetResourceString, which takes an ID listed in in the resource file and returns either a translated string or a normal string.
+
+Linux has an implementation in PAL_GetResourceString that uses GetText. On OS X, the compiled in string is returned, but there's a TODO to implement this functionality.
+
+
+== IDES for working with .NET
+* http://www.omnisharp.net/[Omnisharp]: For C# on OS X and Linux
+* http://ionide.io[Ionide]: For F# on OS X and Linux.
+* https://www.visualstudio.com/products/visual-studio-community-vs[Visual Studio Community]: A very capable IDE, for free. Windows only.
+* https://code.visualstudio.com/[Visual Studio Code]: A lightweight IDE for Windows, OS X, and Linux.
+
+I haven't yet had the opportunity to use any of these for hands on debugging or interaction with developing CoreCLR.
