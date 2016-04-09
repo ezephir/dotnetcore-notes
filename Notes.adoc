@@ -1,8 +1,6 @@
 = Notes for working with DotNet Core
 
-== CoreCLR
-
-=== Building
+== Building CoreCLR
 
 Both projects seem to have reasonable documentation to follow, although certain
 portions are out of date:
@@ -79,6 +77,38 @@ The output of this function is used by the PAL_GetResourceString, which takes an
 
 Linux has an implementation in PAL_GetResourceString that uses GetText. On OS X, the compiled in string is returned, but there's a TODO to implement this functionality.
 
+== Working with CMake
+
+The minimum version supported version of CMake is 2.8.12.2, as per the source files. New features added to the CLR need to be compatible with this version.
+
+== The Platform Abstraction Library
+Present at `/src/pal` in the tree. Abstracts over the difference between different platforms. Only used by non-Windows platforms.
+
+PAL has it's own separate set of tests that are not normally run. See `/src/pal/tests`. The repository has instructions on how to run them.
+
+It has the following sections:
+
+* `cruntime` More things from the standard C library. This time, the ``standard'' versions. These also generally replace the implementations of the core functions and behave closely to the Windows counterparts. Some of the methods mention being ``suspension safe'' and care about the currently executing thread. Not sure yet what this means.
+
+* `debug` Implementation of the Win32 debugging functions on Unix.
+
+* `handlemgr` Win32 API functions for manipulating the `HANDLE` opaque type.
+
+* `include` The standard boring directory with all of the relevant PAL headers.
+
+*  `init` A collection of functions that have no home because they're ot part of the Win 32 API. Also side-by-side API stuff in `sxs.cpp`
+
+* `locale` Unicode, internationalization, and localization support for the CLR itself.
+
+* `module` Win 32 and internal functions for loading executables and shared libraries. This is used for native libraries and not the Windows-specific ``PE'' format.
+
+* `map` Virtual memory routines, along with support for memory mapping files into virtual memory.
+
+* `memory` Routines for allocating heap memory. There are ``local'' memory allocation functions here, but they're the same as the heap ones. See https://msdn.microsoft.com/en-us/library/windows/desktop/aa366596(v=vs.85).aspx[the MSDN documentation] for more details.
+
+* `misc` A collection of miscellaneous code, mostly Win 32 APIs that don't fit into any of the other categories (e.g. MessageBox)
+
+* `safecrt` A ``safe'' version of the standard C library. Reimplements many of the functions instead of using the host's library. Used on all unix platforms, although the implementation comes from windows.
 
 == IDES for working with .NET
 * http://www.omnisharp.net/[Omnisharp]: For C# on OS X and Linux
