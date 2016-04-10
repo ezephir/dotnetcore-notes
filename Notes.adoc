@@ -70,12 +70,17 @@ There are three different sets of tooling for DotNet Core: It's own commandline 
 
 === Internationalization for Built-In Strings.
 
-* CoreCLR has a library, "mscorrc" which contains localized strings.
-* These strings are compiled by running the Windows Resource File through a script (see rctocpp.awk and processrc.awk in `src/nativeresources.` These tools are used by the build_resource function in `src/CMakeLists.txt`. This function gets called in `src/dlls/mscorrc/full/CMakeLists.txt` and then a target is created with it's output in the same file, causing the cpp file to be generated and for it be used.
+User facing strings in CoreCLR are placed in a resource file so that they can be internationalized. These resources get compiled into a library, mscorrc, which can then be used to internationalize them directly.
 
-The output of this function is used by the PAL_GetResourceString, which takes an ID listed in in the resource file and returns either a translated string or a normal string.
+On non-Windows platforms, `src/nativeresources,` and `src/CMakeFiles.txt` collude in order to translate the resource file into a C++ file that is then turned into a library.
 
-Linux has an implementation in PAL_GetResourceString that uses GetText. On OS X, the compiled in string is returned, but there's a TODO to implement this functionality.
+In order to look up these strings, one calls `PAL_GetResourceString` from `src/pal/locale/unicode.cpp,` which then uses an appropriate mechanism in order to resolve the issue.
+
+On non OS X platforms, GNU GetText is used. On OS X, right now the normal string is returned. There should be a native implementation for OS X, but it seems that build choices preclude it; Mac OS X does not provide an internationalization story for ``command line tools'' as far as I know. It normally requires a bundle/framework or a full Cocoa app, but in this case we're only guaranteed to have a collection of dylibs.
+
+On Windows platforms, the resources are used directly, side-stepping this code.
+
+As far as I can tell, there's no story in the source tree for internationalizing mscorrc.
 
 == Working with CMake
 
@@ -108,7 +113,19 @@ It has the following sections:
 
 * `misc` A collection of miscellaneous code, mostly Win 32 APIs that don't fit into any of the other categories (e.g. MessageBox)
 
+* `objmgr` Inter-process communication via ``objects''. (I'm not exactly sure what these are yet).
+
+* `poll` An implementation of the standard poll function using select instead.
+
 * `safecrt` A ``safe'' version of the standard C library. Reimplements many of the functions instead of using the host's library. Used on all unix platforms, although the implementation comes from windows.
+
+* `shmemory` An implementation of shared memory primitives.
+
+* `sync` Critical sections
+
+* `synchmgr` Implementation of the Win32 API thread waiting functions and other internal infrastructure.
+
+* `synchobj` Semaphores, mutexes, and event objects.
 
 == IDES for working with .NET
 * http://www.omnisharp.net/[Omnisharp]: For C# on OS X and Linux
